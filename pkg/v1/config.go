@@ -31,6 +31,7 @@ type ConfigFile struct {
 	Author        string    `json:"author,omitempty"`
 	Container     string    `json:"container,omitempty"`
 	Created       Time      `json:"created,omitempty"`
+	// Deprecated: original field was removed upstream
 	DockerVersion string    `json:"docker_version,omitempty"`
 	History       []History `json:"history,omitempty"`
 	OS            string    `json:"os"`

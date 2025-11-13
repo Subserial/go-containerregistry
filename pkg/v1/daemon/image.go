@@ -286,7 +286,6 @@ func (i *image) computeConfigFile(inspect api.InspectResponse) (*v1.ConfigFile, 
 		Architecture:  inspect.Architecture,
 		Author:        inspect.Author,
 		Created:       v1.Time{Time: created},
-		DockerVersion: inspect.DockerVersion,
 		History:       history,
 		OS:            inspect.Os,
 		RootFS: v1.RootFS{
