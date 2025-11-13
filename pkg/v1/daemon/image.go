@@ -283,11 +283,11 @@ func (i *image) computeConfigFile(inspect api.InspectResponse) (*v1.ConfigFile, 
 	}
 
 	return &v1.ConfigFile{
-		Architecture:  inspect.Architecture,
-		Author:        inspect.Author,
-		Created:       v1.Time{Time: created},
-		History:       history,
-		OS:            inspect.Os,
+		Architecture: inspect.Architecture,
+		Author:       inspect.Author,
+		Created:      v1.Time{Time: created},
+		History:      history,
+		OS:           inspect.Os,
 		RootFS: v1.RootFS{
 			Type:    inspect.RootFS.Type,
 			DiffIDs: diffIDs,
