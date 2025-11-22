@@ -42,7 +42,7 @@ jobs:
       - uses: chainguard-dev/actions/eof-newline@main
         if: ${{ always() }}
         with:
-          reviewdog_version: v0.19.0
+          reviewdog_version: v0.18.1
 
       - uses: get-woke/woke-action-reviewdog@v0
         if: ${{ always() }}
