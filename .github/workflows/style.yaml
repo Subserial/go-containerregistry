@@ -29,6 +29,9 @@ jobs:
         with:
           version: v2.1.6
 
+      - uses: chainguard-dev/actions/trailing-space@main
+        if: ${{ always() }}
+
       - uses: reviewdog/action-misspell@v1
         if: ${{ always() }}
         with:
@@ -37,8 +40,6 @@ jobs:
           locale: "US"
           exclude: ./vendor/*
 
-      - uses: chainguard-dev/actions/trailing-space@main
-        if: ${{ always() }}
 
       - uses: chainguard-dev/actions/eof-newline@main
         if: ${{ always() }}
