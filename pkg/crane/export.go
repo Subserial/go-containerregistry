@@ -48,7 +48,7 @@ func Export(img v1.Image, w io.Writer) error {
 			return err
 		}
 	}
-	fs := mutate.Extract(img)
+	fs := mutate.ExtractFilesystemSafe(img)
 	_, err = io.Copy(w, fs)
 	return err
 }

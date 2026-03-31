@@ -255,14 +255,35 @@ func Extract(img v1.Image) io.ReadCloser {
 		// extraction. These errors will be returned by the reader end
 		// on subsequent reads. If err == nil, the reader will return
 		// EOF.
-		pw.CloseWithError(extract(img, pw))
+		pw.CloseWithError(extract(img, pw, false))
+	}()
+
+	return pr
+}
+
+// ExtractFilesystemSafe takes an image and returns an io.ReadCloser containing
+// the image's flattened filesystem.
+//
+// This is the same operation as Extract, except that links with absolute paths
+// are rewritten as relative links.
+//
+// Callers can read the filesystem contents by passing the reader to
+// tar.NewReader, or io.Copy it directly to some output.
+//
+// If a caller doesn't read the full contents, they should Close it to free up
+// resources used during extraction.
+func ExtractFilesystemSafe(img v1.Image) io.ReadCloser {
+	pr, pw := io.Pipe()
+
+	go func() {
+		pw.CloseWithError(extract(img, pw, true))
 	}()
 
 	return pr
 }
 
 // Adapted from https://github.com/google/containerregistry/blob/da03b395ccdc4e149e34fbb540483efce962dc64/client/v2_2/docker_image_.py#L816
-func extract(img v1.Image, w io.Writer) error {
+func extract(img v1.Image, w io.Writer, makeLinksRelative bool) error {
 	tarWriter := tar.NewWriter(w)
 	defer tarWriter.Close()
 
@@ -308,14 +329,21 @@ func extract(img v1.Image, w io.Writer) error {
 			if strings.HasPrefix(header.Name, "..") {
 				continue
 			}
-
 			// Reject relative symlinks and hardlinks that point outside the
-			// extraction root. Absolute links are preserved.
+			// extraction root.
 			if header.Typeflag == tar.TypeSymlink || header.Typeflag == tar.TypeLink {
-				linkTarget := filepath.Clean(header.Linkname)
+				linkTarget := filepath.Join(filepath.Dir(header.Name), header.Linkname)
 				if strings.HasPrefix(linkTarget, "..") {
 					continue
 				}
+			}
+			// For filesystem outputs, modify absolute links to use relative paths.
+			if makeLinksRelative && (header.Typeflag == tar.TypeSymlink || header.Typeflag == tar.TypeLink) && filepath.IsAbs(header.Linkname) {
+				relLink, err := filepath.Rel(filepath.Join("/", filepath.Dir(header.Name)), header.Linkname)
+				if err != nil {
+					continue
+				}
+				header.Linkname = relLink
 			}
 
 			// force PAX format to remove Name/Linkname length limit of 100 characters

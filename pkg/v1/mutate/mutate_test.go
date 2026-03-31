@@ -126,6 +126,66 @@ func TestExtractPartialRead(t *testing.T) {
 	}
 }
 
+func TestExtractFilesystemSafe(t *testing.T) {
+	tests := []struct {
+		name      string
+		entry     tar.Header
+		wantNames []string
+		wantLinks []string
+	}{
+		{
+			name: "permitted dot-dot linkname",
+			entry: tar.Header{
+				Name: "topdir/subdir/deep-link", Typeflag: tar.TypeSymlink, Linkname: "../../etc",
+			},
+			wantNames: []string{"topdir/subdir/deep-link"},
+			wantLinks: []string{"../../etc"},
+		},
+		{
+			name: "symlink escape via dot-dot linkname",
+			entry: tar.Header{
+				Name: "evil-link", Typeflag: tar.TypeSymlink, Linkname: "../../etc",
+			},
+		},
+		{
+			name: "transformed hardlink",
+			entry: tar.Header{
+				Name: "absolute-link", Typeflag: tar.TypeLink, Linkname: "/etc/passwd",
+			},
+			wantNames: []string{"absolute-link"},
+			wantLinks: []string{"etc/passwd"},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			img := buildImageWithEntries(t, []tar.Header{tc.entry})
+			tr := tar.NewReader(mutate.ExtractFilesystemSafe(img))
+
+			var gotNames []string
+			var gotLinks []string
+			for {
+				hdr, err := tr.Next()
+				if errors.Is(err, io.EOF) {
+					break
+				}
+				if err != nil {
+					t.Fatalf("reading tar: %v", err)
+				}
+				gotNames = append(gotNames, hdr.Name)
+				gotLinks = append(gotLinks, hdr.Linkname)
+			}
+
+			if !reflect.DeepEqual(gotNames, tc.wantNames) {
+				t.Errorf("extracted names = %v, want %v", gotNames, tc.wantNames)
+			}
+			if !reflect.DeepEqual(gotLinks, tc.wantLinks) {
+				t.Errorf("extracted links = %v, want %v", gotLinks, tc.wantLinks)
+			}
+		})
+	}
+}
+
 func TestExtractRejectsPathTraversal(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -149,12 +209,20 @@ func TestExtractRejectsPathTraversal(t *testing.T) {
 			wantName: []string{"safe.txt", "etc/shadow"},
 		},
 		{
-			name: "permitted escape via absolute linkname",
+			name: "transformed absolute linkname",
 			entries: []tar.Header{
 				{Name: "safe.txt", Typeflag: tar.TypeReg, Size: 0},
 				{Name: "absolute-link", Typeflag: tar.TypeSymlink, Linkname: "/etc"},
 			},
 			wantName: []string{"safe.txt", "absolute-link"},
+		},
+		{
+			name: "permitted dot-dot linkname",
+			entries: []tar.Header{
+				{Name: "safe.txt", Typeflag: tar.TypeReg, Size: 0},
+				{Name: "topdir/subdir/deep-link", Typeflag: tar.TypeSymlink, Linkname: "../../etc"},
+			},
+			wantName: []string{"safe.txt", "topdir/subdir/deep-link"},
 		},
 		{
 			name: "symlink escape via dot-dot linkname",
