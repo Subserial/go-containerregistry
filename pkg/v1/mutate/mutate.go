@@ -332,7 +332,7 @@ func extract(img v1.Image, w io.Writer, makeLinksRelative bool) error {
 			// Reject relative symlinks and hardlinks that point outside the
 			// extraction root.
 			if header.Typeflag == tar.TypeSymlink || header.Typeflag == tar.TypeLink {
-				linkTarget := filepath.Join(filepath.Dir(header.Name), header.Linkname)
+				linkTarget := filepath.Join(filepath.Dir(header.Name), header.Linkname) //nolint:gosec // G305: header.Name is relative
 				if strings.HasPrefix(linkTarget, "..") {
 					continue
 				}
