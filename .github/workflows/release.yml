@@ -52,6 +52,8 @@ jobs:
     with:
       base64-subjects: "${{ needs.goreleaser.outputs.hashes }}"
       upload-assets: true # upload to a new release
+    env:
+      BUILDER_REF: "v2.1.0" # synced with version ref
 
   verification:
     needs: [goreleaser, provenance]
